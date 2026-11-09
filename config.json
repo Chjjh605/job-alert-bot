@@ -1,6 +1,5 @@
 {
-  "job_keywords": ["클라우드", "인프라", "서버", "시스템 운영", "네트워크", "IDC", "기술지원",
-                   "DevOps", "리눅스", "Linux", "AWS", "IT"],
+  "job_keywords": [],
   "kinds": ["인턴", "일경험", "신입"],
   "regions": ["서울", "경기", "인천"],
   "exclude_keywords": ["경력", "시니어", "영업"],

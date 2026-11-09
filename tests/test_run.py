@@ -242,3 +242,13 @@ def test_마감_임박_알림을_못_보내면_다음_실행에서_다시_보낸
     실행([출처], 저녁, tmp_path, now=NOW + timedelta(hours=9))
 
     assert 저녁.마감임박 == [["서버 운영 인턴"]]
+
+
+def test_직무_키워드를_비워_두면_직무로_거르지_않는다(tmp_path):
+    디스코드 = 가짜디스코드()
+    조건 = replace(CONDITIONS, job_keywords=[])
+    사무인턴 = 공고(source="잡알리오", title="체험형 청년인턴 채용", job_field="경영.회계.사무", program_type="")
+
+    run_once([가짜출처("잡알리오", [사무인턴])], 디스코드, tmp_path / "state.json", 조건, NOW)
+
+    assert 디스코드.알림제목() == ["체험형 청년인턴 채용"]

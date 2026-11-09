@@ -6,6 +6,7 @@
 
 비밀 값은 환경변수 또는 .env 파일로 넣는다 (.env 는 GitHub 에 올라가지 않음)
   DISCORD_WEBHOOK_URL   Discord 채널 웹훅 주소
+  JOBALIO_SERVICE_KEY   공공데이터포털 인증키 (잡알리오, 없으면 잡알리오는 건너뜀)
 """
 import argparse
 import json
@@ -20,6 +21,7 @@ from .discord import build_embed
 from .discord import DiscordNotifier
 from .model import InterestConditions
 from .run import run_once
+from .sources.jobalio import JobAlioSource
 from .sources.youth_work import YouthWorkSource
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -66,7 +68,13 @@ def main(argv=None) -> int:
 
     load_dotenv(ROOT / ".env")
     conditions = InterestConditions(**json.loads((ROOT / "config.json").read_text(encoding="utf-8")))
+    # 출처별로 요청할 때 범위를 좁힌다: 청년일경험은 IT 직무, 잡알리오는 체험형 청년인턴(직무 무관)
     sources = [YouthWorkSource()]
+    jobalio_key = os.environ.get("JOBALIO_SERVICE_KEY", "").strip()
+    if jobalio_key:
+        sources.append(JobAlioSource(jobalio_key))
+    else:
+        print("JOBALIO_SERVICE_KEY 가 없어 잡알리오는 건너뜁니다.")
     state_path = Path(args.state)
 
     if args.dry_run:

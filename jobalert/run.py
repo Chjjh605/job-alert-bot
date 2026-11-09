@@ -22,8 +22,8 @@ class RunReport:
 def matches(posting: Posting, conditions: InterestConditions, today: date) -> bool:
     """관심 조건에 맞으면 True. 확인할 수 없는 값(학력 정보 없음, 상시채용)은 놓치지 않도록 통과시킨다."""
     text = f"{posting.title} {posting.job_field}"
-    if not any(word in text for word in conditions.job_keywords):
-        return False
+    if conditions.job_keywords and not any(word in text for word in conditions.job_keywords):
+        return False      # 비워 두면 직무로 거르지 않음 (출처에 요청할 때 이미 범위를 좁힌 경우)
     if any(word in posting.title for word in conditions.exclude_keywords):
         return False
     if posting.kind not in conditions.kinds:
