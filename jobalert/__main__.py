@@ -2,6 +2,7 @@
 
   python -m jobalert            실제 실행: 새 공고를 Discord 로 보내고 기록을 남김
   python -m jobalert --dry-run  테스트 실행: 보낼 공고를 화면에만 출력 (기록은 바뀌지 않음)
+  pythonw -m jobalert --log-file state/run.log   작업 스케줄러용: 창 없이 실행, 결과는 파일에
 
 비밀 값은 환경변수 또는 .env 파일로 넣는다 (.env 는 GitHub 에 올라가지 않음)
   DISCORD_WEBHOOK_URL   Discord 채널 웹훅 주소
@@ -53,7 +54,12 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="jobalert")
     parser.add_argument("--dry-run", action="store_true", help="Discord 로 보내지 않고 화면에만 출력")
     parser.add_argument("--state", default=str(ROOT / "state" / "state.json"))
+    parser.add_argument("--log-file", help="출력을 화면 대신 이 파일 끝에 덧붙임 (작업 스케줄러용)")
     args = parser.parse_args(argv)
+
+    if args.log_file:     # 작업 스케줄러는 창 없이(pythonw) 실행하므로 결과를 파일로 남긴다
+        Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)
+        sys.stdout = sys.stderr = open(args.log_file, "a", encoding="utf-8", buffering=1)
 
     load_dotenv(ROOT / ".env")
     conditions = InterestConditions(**json.loads((ROOT / "config.json").read_text(encoding="utf-8")))
