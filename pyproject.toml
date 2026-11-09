@@ -1,0 +1,11 @@
+[project]
+name = "jobalert"
+version = "0.1.0"
+description = "취업 공고 알림: 새 공고를 Discord로 알려 주는 개인용 봇"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# 테스트 이름에 쓴 한글이 \uXXXX 로 깨져 보이지 않게
+disable_test_id_escaping_and_forfeit_all_rights_to_community_support = true

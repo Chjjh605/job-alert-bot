@@ -1,0 +1,61 @@
+name: 공고 알림
+
+on:
+  schedule:
+    - cron: "0 0,9 * * *"        # 매일 09:00, 18:00 (한국 시간 = UTC+9)
+  workflow_dispatch:              # Actions 화면에서 직접 실행 버튼
+    inputs:
+      dry_run:
+        description: "Discord 로 보내지 않고 화면에만 출력"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write                 # bot-state 브랜치에 기록을 저장하려고
+
+concurrency:                      # 두 번 겹쳐 돌지 않게
+  group: jobalert
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 보낸 공고 기록 가져오기 (bot-state 브랜치)
+        run: |
+          mkdir -p state
+          if git fetch --depth=1 origin bot-state:bot-state; then
+            git show bot-state:state.json > state/state.json
+          else
+            echo "기록이 없음 → 첫 실행"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 실행
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m jobalert ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: 보낸 공고 기록 저장 (bot-state 브랜치)
+        if: always() && !inputs.dry_run   # 일부 출처가 실패해도 보낸 기록은 저장
+        run: |
+          [ -f state/state.json ] || exit 0
+          cp state/state.json "$RUNNER_TEMP/state.json"
+          git config user.name "jobalert-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git show-ref --verify --quiet refs/heads/bot-state; then
+            git switch bot-state
+          else
+            git switch --orphan bot-state
+          fi
+          cp "$RUNNER_TEMP/state.json" state.json
+          git add state.json
+          if git diff --cached --quiet; then echo "바뀐 기록 없음"; exit 0; fi
+          git commit -m "기록 갱신 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          git push origin bot-state
