@@ -77,3 +77,14 @@ def test_한_페이지가_가득_차면_다음_페이지도_가져온다():
 def test_목록_구조를_못_찾으면_사이트가_바뀐_것으로_보고_수집_실패로_알린다():
     with pytest.raises(SourceError, match="목록"):
         YouthWorkSource(http=가짜HTTP("<html><body>점검 중입니다</body></html>")).fetch()
+
+
+def test_연결이_안_되면_수집_실패로_알리고_원인을_적는다():
+    import urllib.error
+
+    class 끊기는HTTP:
+        def post_form(self, url, form):
+            raise urllib.error.URLError(ConnectionResetError(104, "Connection reset by peer"))
+
+    with pytest.raises(SourceError, match="Connection reset by peer"):
+        YouthWorkSource(http=끊기는HTTP()).fetch()

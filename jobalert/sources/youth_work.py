@@ -78,8 +78,9 @@ class YouthWorkSource:
                 page = self.http.post_form(LIST_URL, form)
             except HttpError as e:
                 raise SourceError(str(e)) from None
-            except OSError as e:                      # 연결 실패·시간 초과
-                raise SourceError(f"연결 실패 ({e.__class__.__name__})") from None
+            except OSError as e:                      # 연결 실패·시간 초과 (원인에는 주소가 들어 있지 않음)
+                reason = getattr(e, "reason", None) or e
+                raise SourceError(f"연결 실패 ({e.__class__.__name__}: {reason})") from None
             found = parse_cards(page)
             postings.extend(found)
             if len(found) < self.page_size:           # 마지막 페이지
