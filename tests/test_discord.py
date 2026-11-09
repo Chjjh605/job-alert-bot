@@ -124,3 +124,19 @@ def test_수집_실패_알림은_글로_보낸다():
 
     assert http.보낸것[0]["content"] == "⚠️ 수집 실패 알림"
     assert http.보낸것[0]["allowed_mentions"] == {"parse": []}
+
+
+def test_마감_임박_알림은_내일_마감인_공고를_한_메시지에_모아_링크와_함께_보낸다():
+    http = 가짜HTTP()
+    내일 = date(2026, 11, 11)
+    공고들 = [[공고(title="서버 운영 인턴", company="구름테크", url="https://example.test/A", deadline=내일)],
+              [공고(title="클라우드 인턴", company="하늘소프트", url="https://example.test/B", deadline=내일)]]
+
+    DiscordNotifier(WEBHOOK, http=http, sleep=lambda s: None).send_deadline_reminder(공고들, NOW)
+
+    assert http.보낸것[0]["content"] == (
+        "⏰ 내일(11/11) 마감 공고 2건\n"
+        "- [서버 운영 인턴](<https://example.test/A>) · 구름테크\n"
+        "- [클라우드 인턴](<https://example.test/B>) · 하늘소프트"
+    )
+    assert http.보낸것[0]["allowed_mentions"] == {"parse": []}

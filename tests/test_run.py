@@ -51,6 +51,7 @@ class 가짜디스코드:
         self.고장 = 고장
         self.보낸공고: list[list[Posting]] = []   # 알림 한 건 = 같은 공고로 묶인 Posting 목록
         self.보낸글: list[str] = []
+        self.마감임박: list[list[str]] = []      # 마감 임박 알림 한 건 = 공고 제목 목록
 
     def send_posting(self, postings, now):
         if self.고장:
@@ -59,6 +60,11 @@ class 가짜디스코드:
 
     def send_text(self, text):
         self.보낸글.append(text)
+
+    def send_deadline_reminder(self, groups, now):
+        if self.고장:
+            raise SendError("HTTP 500")
+        self.마감임박.append([group[0].title for group in groups])
 
     def 알림제목(self):
         return [group[0].title for group in self.보낸공고]
@@ -189,3 +195,50 @@ def test_문제가_없으면_실행_결과가_정상이다(tmp_path):
     결과 = 실행([가짜출처("청년일경험", [공고()])], 가짜디스코드(), tmp_path)
 
     assert 결과.ok
+
+
+# ---------------------------------------------------------------- 마감 임박 알림
+내일마감 = 공고(source_id="PG010", title="서버 운영 인턴", deadline=date(2026, 11, 11))
+다음주마감 = 공고(source_id="PG011", title="클라우드 인턴", deadline=date(2026, 11, 17))
+전날밤 = NOW - timedelta(hours=15)        # 11/9 18:00
+
+
+def test_하루_첫_실행에서_알림을_보냈던_공고_중_내일_마감인_것을_모아_알린다(tmp_path):
+    출처 = 가짜출처("청년일경험", [내일마감, 다음주마감])
+    실행([출처], 가짜디스코드(), tmp_path, now=전날밤)
+
+    아침 = 가짜디스코드()
+    실행([출처], 아침, tmp_path, now=NOW)            # 11/10 09:00, 내일 = 11/11
+
+    assert 아침.마감임박 == [["서버 운영 인턴"]]
+
+
+def test_마감_임박_알림은_같은_날_두_번_보내지_않는다(tmp_path):
+    출처 = 가짜출처("청년일경험", [내일마감])
+    실행([출처], 가짜디스코드(), tmp_path, now=전날밤)
+    실행([출처], 가짜디스코드(), tmp_path, now=NOW)
+
+    저녁 = 가짜디스코드()
+    실행([출처], 저녁, tmp_path, now=NOW + timedelta(hours=9))
+
+    assert 저녁.마감임박 == []
+
+
+def test_이번_실행에서_처음_알린_공고는_마감_임박_알림에_넣지_않는다(tmp_path):
+    디스코드 = 가짜디스코드()
+
+    실행([가짜출처("청년일경험", [내일마감])], 디스코드, tmp_path, now=NOW)
+
+    assert 디스코드.알림제목() == ["서버 운영 인턴"]     # 새 공고 알림에 이미 D-1 로 보임
+    assert 디스코드.마감임박 == []
+
+
+def test_마감_임박_알림을_못_보내면_다음_실행에서_다시_보낸다(tmp_path):
+    출처 = 가짜출처("청년일경험", [내일마감])
+    실행([출처], 가짜디스코드(), tmp_path, now=전날밤)
+    실행([출처], 가짜디스코드(고장=True), tmp_path, now=NOW)
+
+    저녁 = 가짜디스코드()
+    실행([출처], 저녁, tmp_path, now=NOW + timedelta(hours=9))
+
+    assert 저녁.마감임박 == [["서버 운영 인턴"]]

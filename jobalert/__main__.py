@@ -45,6 +45,9 @@ class ConsolePrinter:
     def send_text(self, text):
         print(f"  (보낼 글) {text}")
 
+    def send_deadline_reminder(self, groups, now):
+        print(f"  (마감 임박 알림) 내일 마감 {len(groups)}건: " + ", ".join(g[0].title for g in groups))
+
 
 def main(argv=None) -> int:
     try:

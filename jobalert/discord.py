@@ -1,6 +1,6 @@
 """Discord 웹훅으로 알림 보내기"""
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from .errors import SendError
 from .http import Http, HttpError
@@ -56,6 +56,13 @@ class DiscordNotifier:
         self._post({"username": "취업 공고 알림", "allowed_mentions": NO_MENTIONS,
                     "embeds": [build_embed(postings, now)]})
         self.sleep(1)    # 연속 전송 간격 (전송 제한 예방)
+
+    def send_deadline_reminder(self, groups: list[list[Posting]], now: datetime) -> None:
+        """마감 임박 알림: 내일 마감인 공고들을 한 메시지로. 링크를 <> 로 감싸 미리보기 카드가 줄줄이 붙지 않게 한다."""
+        tomorrow = now.date() + timedelta(days=1)
+        lines = [f"⏰ 내일({tomorrow.month}/{tomorrow.day}) 마감 공고 {len(groups)}건"]
+        lines += [f"- [{g[0].title}](<{g[0].url}>) · {g[0].company}" for g in groups]
+        self.send_text("\n".join(lines))
 
     def send_text(self, text: str) -> None:
         self._post({"username": "취업 공고 알림", "allowed_mentions": NO_MENTIONS, "content": text[:2000]})

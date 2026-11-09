@@ -24,6 +24,7 @@ class SentRecord:
 @dataclass
 class State:
     sent: dict[str, SentRecord] = field(default_factory=dict)
+    last_reminder: date | None = None     # 마감 임박 알림을 마지막으로 처리한 날
 
     @classmethod
     def load(cls, path: Path) -> "State":
@@ -37,11 +38,13 @@ class State:
             )
             for k, v in raw.get("sent", {}).items()
         }
-        return cls(sent=sent)
+        last = raw.get("last_reminder")
+        return cls(sent=sent, last_reminder=date.fromisoformat(last) if last else None)
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         raw = {
+            "last_reminder": self.last_reminder.isoformat() if self.last_reminder else None,
             "sent": {
                 k: {"deadline": r.deadline.isoformat() if r.deadline else None,
                     "sent_on": r.sent_on.isoformat()}

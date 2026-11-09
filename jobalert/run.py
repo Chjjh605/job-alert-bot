@@ -1,11 +1,12 @@
-"""한 번의 실행: 출처에서 공고 수집 → 관심 조건 확인 → 같은 공고 묶기 → 알림 → 기록"""
+"""한 번의 실행: 출처에서 공고 수집 → 관심 조건 확인 → 같은 공고 묶기 → 알림 → 마감 임박 알림 → 기록"""
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from .errors import SendError, SourceError
 from .model import InterestConditions, Posting
 from .store import State
+
 
 @dataclass
 class RunReport:
@@ -63,6 +64,7 @@ def run_once(sources, notifier, state_path: Path, conditions: InterestConditions
                 groups.setdefault(same_posting_key(posting), []).append(posting)
 
     # ② 알림: 보내는 데 성공한 것만 기록 → 실패한 건 다음 실행 때 다시 보냄
+    fresh: set[str] = set()                     # 이번 실행에서 처음 알린 공고
     for key, group in groups.items():
         if state.already_sent(key, today):
             continue
@@ -72,11 +74,25 @@ def run_once(sources, notifier, state_path: Path, conditions: InterestConditions
             report.errors.append(f"알림 전송 실패: {e}")
             continue
         state.mark_sent(key, group[0].deadline, today)
+        fresh.add(key)
         report.sent += 1
+
+    # ③ 마감 임박 알림: 그날 첫 실행 때 한 번. 수집이 실패했으면 빠진 공고가 있을 수 있으니 다음 실행으로 미룸
+    collect_failed = any("수집 실패" in e for e in report.errors)
+    if state.last_reminder != today and not collect_failed:
+        tomorrow = today + timedelta(days=1)
+        due = [group for key, group in groups.items()
+               if key not in fresh and state.already_sent(key, today) and group[0].deadline == tomorrow]
+        try:
+            if due:
+                notifier.send_deadline_reminder(due, now)
+            state.last_reminder = today
+        except SendError as e:
+            report.errors.append(f"마감 임박 알림 전송 실패: {e}")
 
     state.save(state_path)
 
-    # ③ 수집 실패 알림 (Discord 자체가 고장이면 이것도 못 가지만, GitHub Actions 실패 메일이 대신 감)
+    # ④ 수집 실패 알림 (Discord 자체가 고장이면 이것도 못 가지만, state/run.log 에는 남음)
     failures = [e for e in report.errors if "수집 실패" in e]
     if failures:
         try:
