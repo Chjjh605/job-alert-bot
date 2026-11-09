@@ -1,8 +1,10 @@
 name: 공고 알림
 
 on:
-  schedule:
-    - cron: "0 0,9 * * *"        # 매일 09:00, 18:00 (한국 시간 = UTC+9)
+  # 예약 실행 중지 (2026-11-09): 청년일경험 포털이 GitHub 서버(해외 IP)의 접속을 받지 않음
+  # (연결 시간 초과). 실행 위치를 정한 뒤 다시 켠다.
+  # schedule:
+  #   - cron: "0 0,9 * * *"      # 매일 09:00, 18:00 (한국 시간 = UTC+9)
   workflow_dispatch:              # Actions 화면에서 직접 실행 버튼
     inputs:
       dry_run:
