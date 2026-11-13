@@ -140,3 +140,16 @@ def test_마감_임박_알림은_내일_마감인_공고를_한_메시지에_모
         "- [클라우드 인턴](<https://example.test/B>) · 하늘소프트"
     )
     assert http.보낸것[0]["allowed_mentions"] == {"parse": []}
+
+
+def test_마감_임박_알림_제목에_대괄호가_붙어_있어도_링크가_깨지지_않는다():
+    http = 가짜HTTP()
+    내일 = date(2026, 11, 11)
+    공고들 = [[공고(title="[훈련연계형](도안회계법인) 미래내일 일경험 - IT", company="도안회계법인",
+                 url="https://example.test/C", deadline=내일)]]
+
+    DiscordNotifier(WEBHOOK, http=http, sleep=lambda s: None).send_deadline_reminder(공고들, NOW)
+
+    assert http.보낸것[0]["content"].splitlines()[1] == (
+        "- [[훈련연계형] (도안회계법인) 미래내일 일경험 - IT](<https://example.test/C>) · 도안회계법인"
+    )

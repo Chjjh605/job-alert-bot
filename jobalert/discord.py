@@ -23,6 +23,14 @@ def education_text(limited: bool | None) -> str:
     return "확인 필요 (공고에서 직접 확인)" if limited is None else ("제한 있음" if limited else "제한 없음")
 
 
+def link_text(text: str) -> str:
+    """[글자](주소) 링크의 글자 부분에 넣을 제목을 다듬는다.
+    제목이 '[훈련연계형](도안회계법인) ...' 처럼 ']('가 붙어 있으면 Discord 가 그 부분을 링크로 읽어
+    바깥 링크가 깨진다. Discord 는 링크 글자 안의 \\[ 이스케이프를 처리하지 않고 그대로 보여 주므로,
+    '] (' 로 띄어 쓴다. ('[훈련연계형] (인크로스) ...' 처럼 띄어 쓴 제목은 원래 잘 보인다)"""
+    return text.replace("](", "] (")
+
+
 def build_embed(postings: list[Posting], now: datetime) -> dict:
     """같은 공고로 묶인 Posting 들 → Discord 카드 하나. 첫 번째 출처의 정보를 대표로 쓴다."""
     main = postings[0]
@@ -61,7 +69,7 @@ class DiscordNotifier:
         """마감 임박 알림: 내일 마감인 공고들을 한 메시지로. 링크를 <> 로 감싸 미리보기 카드가 줄줄이 붙지 않게 한다."""
         tomorrow = now.date() + timedelta(days=1)
         lines = [f"⏰ 내일({tomorrow.month}/{tomorrow.day}) 마감 공고 {len(groups)}건"]
-        lines += [f"- [{g[0].title}](<{g[0].url}>) · {g[0].company}" for g in groups]
+        lines += [f"- [{link_text(g[0].title)}](<{g[0].url}>) · {g[0].company}" for g in groups]
         self.send_text("\n".join(lines))
 
     def send_text(self, text: str) -> None:
